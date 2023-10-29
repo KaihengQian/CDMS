@@ -22,8 +22,9 @@ class Buyer(db_conn.DBConn):
                 return error.error_non_exist_store_id(store_id) + (order_id,)
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
+            store_col = self.conn["store"]
             for book_id, count in id_and_count:
-                book_info = self.conn.store_col.find_one({"store_id": store_id, "book_id": book_id})
+                book_info = store_col.find_one({"store_id": store_id, "book_id": book_id})
                 if book_info is None:
                     return error.error_non_exist_book_id(book_id) + (order_id,)
 
@@ -33,7 +34,7 @@ class Buyer(db_conn.DBConn):
                 if stock_level < count:
                     return error.error_stock_level_low(book_id) + (order_id,)
 
-                result = self.conn.store_col.update_one(
+                result = store_col.update_one(
                     {"store_id": store_id, "book_id": book_id, "stock_level": {"$gte": count}},
                     {"$inc": {"stock_level": -count}}
                 )
@@ -41,14 +42,16 @@ class Buyer(db_conn.DBConn):
                 if result.modified_count == 0:
                     return error.error_stock_level_low(book_id) + (order_id,)
 
-                self.conn.new_order_detail_col.insert_one({
+                new_order_detail_col = self.conn["new_order_detail"]
+                new_order_detail_col.insert_one({
                     "order_id": uid,
                     "book_id": book_id,
                     "count": count,
                     "price": price
                 })
 
-            self.conn.new_order_col.insert_one({
+            new_order_col = self.conn["new_order"]
+            new_order_col.insert_one({
                 "order_id": order_id,
                 "store_id": store_id,
                 "user_id": user_id
@@ -70,9 +73,9 @@ class Buyer(db_conn.DBConn):
         return 200, "ok", order_id
 
     def payment(self, user_id: str, password: str, order_id: str) -> (int, str):
-        conn = self.conn
         try:
-            order = conn.new_order_col.find_one({"order_id": order_id})
+            new_order_col = self.conn["new_order"]
+            order = new_order_col.find_one({"order_id": order_id})
             if order is None:
                 return error.error_invalid_order_id(order_id)
 
@@ -83,7 +86,8 @@ class Buyer(db_conn.DBConn):
             if buyer_id != user_id:
                 return error.error_authorization_fail()
 
-            buyer = conn.user_col.find_one({"user_id": buyer_id})
+            user_col = self.conn["user"]
+            buyer = user_col.find_one({"user_id": buyer_id})
             if buyer is None:
                 return error.error_non_exist_user_id(buyer_id)
             balance = buyer.get("balance")
@@ -91,7 +95,8 @@ class Buyer(db_conn.DBConn):
             if password != buyer.get("password"):
                 return error.error_authorization_fail()
 
-            store = conn.user_store_col.find_one({"store_id": store_id})
+            user_store_col = self.conn["user_store"]
+            store = user_store_col.find_one({"store_id": store_id})
             if store is None:
                 return error.error_non_exist_store_id(store_id)
 
@@ -100,7 +105,8 @@ class Buyer(db_conn.DBConn):
             if not self.user_id_exist(seller_id):
                 return error.error_non_exist_user_id(seller_id)
 
-            order_details = conn.new_order_detail_col.find({"order_id": order_id})
+            new_order_detail_col = self.conn["new_order_detail"]
+            order_details = new_order_detail_col.find({"order_id": order_id})
             total_price = 0
 
             for detail in order_details:
@@ -111,7 +117,7 @@ class Buyer(db_conn.DBConn):
             if balance < total_price:
                 return error.error_not_sufficient_funds(order_id)
 
-            buyer_update_res = conn.user_col.update_one(
+            buyer_update_res = user_col.update_one(
                 {"user_id": buyer_id, "balance": {"$gte": total_price}},
                 {"$inc": {"balance": -total_price}}
             )
@@ -119,7 +125,7 @@ class Buyer(db_conn.DBConn):
             if buyer_update_res.modified_count == 0:
                 return error.error_not_sufficient_funds(order_id)
 
-            buyer_update_res1 = conn.user_col.update_one(
+            buyer_update_res1 = user_col.update_one(
                 {"user_id": buyer_id},
                 {"$inc": {"balance": total_price}}
             )
@@ -127,12 +133,12 @@ class Buyer(db_conn.DBConn):
             if buyer_update_res1.modified_count == 0:
                 return error.error_non_exist_user_id(buyer_id)
 
-            order_del_res = conn.new_order_col.delete_one({"order_id": order_id})
+            order_del_res = new_order_col.delete_one({"order_id": order_id})
 
             if order_del_res.deleted_count == 0:
                 return error.error_invalid_order_id(order_id)
 
-            order_detail_del_res = conn.new_order_detail_col.delete_one({"order_id": order_id})
+            order_detail_del_res = new_order_detail_col.delete_one({"order_id": order_id})
 
             if order_detail_del_res.deleted_count == 0:
                 return error.error_invalid_order_id(order_id)
@@ -152,7 +158,8 @@ class Buyer(db_conn.DBConn):
 
     def add_funds(self, user_id, password, add_value) -> (int, str):
         try:
-            user = self.conn.user_col.find_one({"user_id": user_id})
+            user_col = self.conn["user"]
+            user = user_col.find_one({"user_id": user_id})
 
             if user is None:
                 return error.error_authorization_fail()
@@ -160,7 +167,7 @@ class Buyer(db_conn.DBConn):
             if user.get("password") != password:
                 return error.error_authorization_fail()
 
-            user_update_res = self.conn.user_col.update_one(
+            user_update_res = user_col.update_one(
                 {"user_id": user_id},
                 {"$inc": {"balance": add_value}}
             )

@@ -25,7 +25,8 @@ class Seller(db_conn.DBConn):
             if self.book_id_exist(store_id, book_id):
                 return error.error_exist_book_id(book_id)
 
-            self.conn.store_col.insert_one({
+            store_col = self.conn["store"]
+            store_col.insert_one({
                 "store_id": store_id,
                 "book_id": book_id,
                 "book_info": json.loads(book_json_str),
@@ -53,7 +54,8 @@ class Seller(db_conn.DBConn):
             if not self.book_id_exist(store_id, book_id):
                 return error.error_non_exist_book_id(book_id)
 
-            self.conn.store_col.update_one(
+            store_col = self.conn["store"]
+            store_col.update_one(
                 {"store_id": store_id, "book_id": book_id},
                 {"$inc": {"stock_level": add_stock_level}}
             )
@@ -74,7 +76,8 @@ class Seller(db_conn.DBConn):
             if self.store_id_exist(store_id):
                 return error.error_exist_store_id(store_id)
 
-            self.conn.user_store_col.insert_one({"store_id": store_id, "user_id": user_id})
+            user_store_col = self.conn["user_store"]
+            user_store_col.insert_one({"store_id": store_id, "user_id": user_id})
 
         except ConnectionFailure as cf:
             return 528, f"{str(cf)}", ""
