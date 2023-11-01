@@ -21,6 +21,7 @@ class Buyer(db_conn.DBConn):
             if not self.store_id_exist(store_id):
                 return error.error_non_exist_store_id(store_id) + (order_id,)
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
+            order_id = uid
 
             store_col = self.conn["store"]
             for book_id, count in id_and_count:
@@ -56,8 +57,6 @@ class Buyer(db_conn.DBConn):
                 "store_id": store_id,
                 "user_id": user_id
             })
-
-            order_id = uid
 
         except ConnectionFailure as cf:
             logging.info(f"528 Connection failed: {str(cf)}")

@@ -34,12 +34,12 @@ class Seller(db_conn.DBConn):
             })
 
         except ConnectionFailure as cf:
-            return 528, f"{str(cf)}", ""
+            return 528, f"{str(cf)}"
         except OperationFailure as of:
-            return 528, f"{str(of)}", ""
+            return 528, f"{str(of)}"
 
         except Exception as e:
-            return 530, f"{str(e)}", ""
+            return 530, f"{str(e)}"
 
         return 200, "ok"
 
@@ -61,12 +61,12 @@ class Seller(db_conn.DBConn):
             )
 
         except ConnectionFailure as cf:
-            return 528, f"{str(cf)}", ""
+            return 528, f"{str(cf)}"
         except OperationFailure as of:
-            return 528, f"{str(of)}", ""
+            return 528, f"{str(of)}"
 
         except Exception as e:
-            return 530, f"{str(e)}", ""
+            return 530, f"{str(e)}"
         return 200, "ok"
 
     def create_store(self, user_id: str, store_id: str) -> (int, str):
@@ -80,10 +80,10 @@ class Seller(db_conn.DBConn):
             user_store_col.insert_one({"store_id": store_id, "user_id": user_id})
 
         except ConnectionFailure as cf:
-            return 528, f"{str(cf)}", ""
+            return 528, f"{str(cf)}"
         except OperationFailure as of:
-            return 528, f"{str(of)}", ""
+            return 528, f"{str(of)}"
 
         except Exception as e:
-            return 530, f"{str(e)}", ""
+            return 530, f"{str(e)}"
         return 200, "ok"

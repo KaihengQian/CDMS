@@ -28,7 +28,7 @@ class Book:
 
 
 class BookDB:
-    def __init__(self, large: bool = False):
+    def __init__(self, large: bool = True):
         self.db_s = "book"
         self.db_l = "book_lx"
         if large:

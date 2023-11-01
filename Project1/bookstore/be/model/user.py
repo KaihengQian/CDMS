@@ -42,9 +42,8 @@ class User(db_conn.DBConn):
 
     def __check_token(self, user_id, db_token, token) -> bool:
         try:
-            # if db_token != token:
-            #     # print("not equal")
-            #     return False
+            if db_token != token:
+                return False
             jwt_text = jwt_decode(encoded_token=token, user_id=user_id)
             ts = jwt_text["timestamp"]
             if ts is not None:
@@ -75,10 +74,9 @@ class User(db_conn.DBConn):
     def check_token(self, user_id: str, token: str) -> (int, str):
         user_col = self.conn["user"]
         row = user_col.find_one({'user_id': user_id}, {'_id': 0, 'token': 1})
-        if row is None:
+        if row.count() == 0:
             return error.error_authorization_fail()
         db_token = row["token"]
-        print(type(db_token))
         if not self.__check_token(user_id, db_token, token):
             return error.error_authorization_fail()
         return 200, "ok"
@@ -86,7 +84,7 @@ class User(db_conn.DBConn):
     def check_password(self, user_id: str, password: str) -> (int, str):
         user_col = self.conn["user"]
         row = user_col.find_one({'user_id': user_id}, {'_id': 0, 'password': 1})
-        if row is None:
+        if row.count() == 0:
             return error.error_authorization_fail()
 
         if password != row["password"]:
@@ -103,7 +101,8 @@ class User(db_conn.DBConn):
 
             token = jwt_encode(user_id, terminal)
             user_col = self.conn["user"]
-            if user_col.count_documents({}) == 0:
+            cursor = user_col.find({'user_id': user_id})
+            if cursor.count() == 0:
                 return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'token': token, 'terminal': terminal}}
@@ -112,7 +111,6 @@ class User(db_conn.DBConn):
             return 528, "{}".format(str(e)), ""
         except Exception as e:
             return 530, "{}".format(str(e)), ""
-        print(token)
         return 200, "ok", token
 
     def logout(self, user_id: str, token: str) -> bool:
@@ -125,7 +123,8 @@ class User(db_conn.DBConn):
             dummy_token = jwt_encode(user_id, terminal)
 
             user_col = self.conn["user"]
-            if user_col.count_documents({}) == 0:
+            cursor = user_col.find({'user_id': user_id})
+            if cursor.count() == 0:
                 return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'token': dummy_token, 'terminal': terminal}}
@@ -143,7 +142,8 @@ class User(db_conn.DBConn):
                 return code, message
 
             user_col = self.conn["user"]
-            if user_col.count_documents({}) == 1:
+            cursor = user_col.find({'user_id': user_id})
+            if cursor.count() == 1:
                 user_col.delete_one({'user_id': user_id})
             else:
                 return error.error_authorization_fail()
@@ -164,7 +164,8 @@ class User(db_conn.DBConn):
             terminal = "terminal_{}".format(str(time.time()))
             token = jwt_encode(user_id, terminal)
             user_col = self.conn["user"]
-            if user_col.count_documents({}) == 0:
+            cursor = user_col.find({'user_id': user_id})
+            if cursor.count() == 0:
                 return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'password': new_password, 'token': token, 'terminal': terminal}}
