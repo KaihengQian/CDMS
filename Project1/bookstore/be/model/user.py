@@ -42,8 +42,9 @@ class User(db_conn.DBConn):
 
     def __check_token(self, user_id, db_token, token) -> bool:
         try:
-            if db_token != token:
-                return False
+            # if db_token != token:
+            #     # print("not equal")
+            #     return False
             jwt_text = jwt_decode(encoded_token=token, user_id=user_id)
             ts = jwt_text["timestamp"]
             if ts is not None:
@@ -73,21 +74,22 @@ class User(db_conn.DBConn):
 
     def check_token(self, user_id: str, token: str) -> (int, str):
         user_col = self.conn["user"]
-        row = user_col.findone({'user_id': user_id}, {'_id': 0, 'token': 1})
+        row = user_col.find_one({'user_id': user_id}, {'_id': 0, 'token': 1})
         if row is None:
             return error.error_authorization_fail()
-        db_token = row[0]
+        db_token = row["token"]
+        print(type(db_token))
         if not self.__check_token(user_id, db_token, token):
             return error.error_authorization_fail()
         return 200, "ok"
 
     def check_password(self, user_id: str, password: str) -> (int, str):
         user_col = self.conn["user"]
-        row = user_col.findone({'user_id': user_id}, {'_id': 0, 'password': 1})
+        row = user_col.find_one({'user_id': user_id}, {'_id': 0, 'password': 1})
         if row is None:
             return error.error_authorization_fail()
 
-        if password != row[0]:
+        if password != row["password"]:
             return error.error_authorization_fail()
 
         return 200, "ok"
@@ -108,8 +110,9 @@ class User(db_conn.DBConn):
             user_col.update_one(condition, update_data)
         except pymongo.errors.PyMongoError as e:
             return 528, "{}".format(str(e)), ""
-        except BaseException as e:
+        except Exception as e:
             return 530, "{}".format(str(e)), ""
+        print(token)
         return 200, "ok", token
 
     def logout(self, user_id: str, token: str) -> bool:
@@ -129,7 +132,7 @@ class User(db_conn.DBConn):
             user_col.update_one(condition, update_data)
         except pymongo.errors.PyMongoError as e:
             return 528, "{}".format(str(e))
-        except BaseException as e:
+        except Exception as e:
             return 530, "{}".format(str(e))
         return 200, "ok"
 
@@ -141,12 +144,12 @@ class User(db_conn.DBConn):
 
             user_col = self.conn["user"]
             if user_col.count_documents({}) == 1:
-                user_col.delete_many({'user_id': user_id})
+                user_col.delete_one({'user_id': user_id})
             else:
                 return error.error_authorization_fail()
         except pymongo.errors.PyMongoError as e:
             return 528, "{}".format(str(e))
-        except BaseException as e:
+        except Exception as e:
             return 530, "{}".format(str(e))
         return 200, "ok"
 

@@ -19,6 +19,7 @@ class Store:
         try:
             conn = self.get_db_conn()
             self.user_col = conn["user"]
+            self.user_col.create_index([("user_id", pymongo.TEXT)], unique=True)
             self.user_store_col = conn["user_store"]
             self.store_col = conn["store"]
             self.new_order_col = conn["new_order"]
