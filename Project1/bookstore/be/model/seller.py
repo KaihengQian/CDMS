@@ -7,7 +7,7 @@ from be.model import db_conn
 
 class Seller(db_conn.DBConn):
     def __init__(self):
-        db_conn.DBConn.__init__(self)
+        super().__init__()
 
     def add_book(
         self,
@@ -25,11 +25,11 @@ class Seller(db_conn.DBConn):
             if self.book_id_exist(store_id, book_id):
                 return error.error_exist_book_id(book_id)
 
-            store_col = self.conn["store"]
+            store_col = self.db.get_collection("store")
             store_col.insert_one({
                 "store_id": store_id,
                 "book_id": book_id,
-                "book_info": json.loads(book_json_str),
+                "book_info": book_json_str,
                 "stock_level": stock_level
             })
 
@@ -54,7 +54,7 @@ class Seller(db_conn.DBConn):
             if not self.book_id_exist(store_id, book_id):
                 return error.error_non_exist_book_id(book_id)
 
-            store_col = self.conn["store"]
+            store_col = self.db.get_collection("store")
             store_col.update_one(
                 {"store_id": store_id, "book_id": book_id},
                 {"$inc": {"stock_level": add_stock_level}}
@@ -76,7 +76,7 @@ class Seller(db_conn.DBConn):
             if self.store_id_exist(store_id):
                 return error.error_exist_store_id(store_id)
 
-            user_store_col = self.conn["user_store"]
+            user_store_col = self.db.get_collection("user_store")
             user_store_col.insert_one({"store_id": store_id, "user_id": user_id})
 
         except ConnectionFailure as cf:

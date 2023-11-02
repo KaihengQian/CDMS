@@ -9,7 +9,7 @@ from be.model import error
 
 class Buyer(db_conn.DBConn):
     def __init__(self):
-        db_conn.DBConn.__init__(self)
+        super().__init__()
 
     def new_order(
         self, user_id: str, store_id: str, id_and_count: [(str, int)]
@@ -23,7 +23,7 @@ class Buyer(db_conn.DBConn):
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
             order_id = uid
 
-            store_col = self.conn["store"]
+            store_col = self.db.get_collection("store")
             for book_id, count in id_and_count:
                 book_info = store_col.find_one({"store_id": store_id, "book_id": book_id})
                 if book_info is None:
@@ -43,7 +43,7 @@ class Buyer(db_conn.DBConn):
                 if result.modified_count == 0:
                     return error.error_stock_level_low(book_id) + (order_id,)
 
-                new_order_detail_col = self.conn["new_order_detail"]
+                new_order_detail_col = self.db.get_collection("new_order_detail")
                 new_order_detail_col.insert_one({
                     "order_id": uid,
                     "book_id": book_id,
@@ -51,7 +51,7 @@ class Buyer(db_conn.DBConn):
                     "price": price
                 })
 
-            new_order_col = self.conn["new_order"]
+            new_order_col = self.db.get_collection("new_order")
             new_order_col.insert_one({
                 "order_id": order_id,
                 "store_id": store_id,
@@ -73,7 +73,7 @@ class Buyer(db_conn.DBConn):
 
     def payment(self, user_id: str, password: str, order_id: str) -> (int, str):
         try:
-            new_order_col = self.conn["new_order"]
+            new_order_col = self.db.get_collection("new_order")
             order = new_order_col.find_one({"order_id": order_id})
             if order is None:
                 return error.error_invalid_order_id(order_id)
@@ -85,7 +85,7 @@ class Buyer(db_conn.DBConn):
             if buyer_id != user_id:
                 return error.error_authorization_fail()
 
-            user_col = self.conn["user"]
+            user_col = self.db.get_collection("user")
             buyer = user_col.find_one({"user_id": buyer_id})
             if buyer is None:
                 return error.error_non_exist_user_id(buyer_id)
@@ -94,7 +94,7 @@ class Buyer(db_conn.DBConn):
             if password != buyer.get("password"):
                 return error.error_authorization_fail()
 
-            user_store_col = self.conn["user_store"]
+            user_store_col = self.db.get_collection("user_store")
             store = user_store_col.find_one({"store_id": store_id})
             if store is None:
                 return error.error_non_exist_store_id(store_id)
@@ -104,7 +104,7 @@ class Buyer(db_conn.DBConn):
             if not self.user_id_exist(seller_id):
                 return error.error_non_exist_user_id(seller_id)
 
-            new_order_detail_col = self.conn["new_order_detail"]
+            new_order_detail_col = self.db.get_collection("new_order_detail")
             order_details = new_order_detail_col.find({"order_id": order_id})
             total_price = 0
 
@@ -157,7 +157,7 @@ class Buyer(db_conn.DBConn):
 
     def add_funds(self, user_id, password, add_value) -> (int, str):
         try:
-            user_col = self.conn["user"]
+            user_col = self.db.get_collection("user")
             user = user_col.find_one({"user_id": user_id})
 
             if user is None:
