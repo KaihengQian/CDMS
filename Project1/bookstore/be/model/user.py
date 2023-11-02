@@ -38,7 +38,7 @@ class User(db_conn.DBConn):
     token_lifetime: int = 3600  # 3600 second
 
     def __init__(self):
-        db_conn.DBConn.__init__(self)
+        super().__init__()
 
     def __check_token(self, user_id, db_token, token) -> bool:
         try:
@@ -58,7 +58,7 @@ class User(db_conn.DBConn):
         try:
             terminal = "terminal_{}".format(str(time.time()))
             token = jwt_encode(user_id, terminal)
-            user_col = self.conn["user"]
+            user_col = self.db.get_collection("user")
             user_info = {
                 "user_id": user_id,
                 "password": password,
@@ -72,43 +72,42 @@ class User(db_conn.DBConn):
         return 200, "ok"
 
     def check_token(self, user_id: str, token: str) -> (int, str):
-        user_col = self.conn["user"]
-        row = user_col.find_one({'user_id': user_id}, {'_id': 0, 'token': 1})
-        if row.count() == 0:
+        user_col = self.db.get_collection("user")
+        row = user_col.find_one({'user_id': user_id})
+        if row is None:
             return error.error_authorization_fail()
-        db_token = row["token"]
+        db_token = row.get("token", "")
         if not self.__check_token(user_id, db_token, token):
             return error.error_authorization_fail()
         return 200, "ok"
 
     def check_password(self, user_id: str, password: str) -> (int, str):
-        user_col = self.conn["user"]
-        row = user_col.find_one({'user_id': user_id}, {'_id': 0, 'password': 1})
-        if row.count() == 0:
+        user_col = self.db.get_collection("user")
+        row = user_col.find_one({'user_id': user_id})
+        if row is None:
             return error.error_authorization_fail()
 
-        if password != row["password"]:
+        if password != row.get("password", ""):
             return error.error_authorization_fail()
 
         return 200, "ok"
 
     def login(self, user_id: str, password: str, terminal: str) -> (int, str, str):
-        token = ""
         try:
             code, message = self.check_password(user_id, password)
             if code != 200:
                 return code, message, ""
 
             token = jwt_encode(user_id, terminal)
-            user_col = self.conn["user"]
-            cursor = user_col.find({'user_id': user_id})
-            if cursor.count() == 0:
-                return error.error_authorization_fail() + ("",)
+            user_col = self.db.get_collection("user")
+            # cursor = user_col.find({'user_id': user_id})
+            # if cursor is None:
+            #     return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'token': token, 'terminal': terminal}}
             user_col.update_one(condition, update_data)
-        except pymongo.errors.PyMongoError as e:
-            return 528, "{}".format(str(e)), ""
+        # except pymongo.errors.PyMongoError as e:
+        #     return 528, "{}".format(str(e)), ""
         except Exception as e:
             return 530, "{}".format(str(e)), ""
         return 200, "ok", token
@@ -122,10 +121,10 @@ class User(db_conn.DBConn):
             terminal = "terminal_{}".format(str(time.time()))
             dummy_token = jwt_encode(user_id, terminal)
 
-            user_col = self.conn["user"]
-            cursor = user_col.find({'user_id': user_id})
-            if cursor.count() == 0:
-                return error.error_authorization_fail() + ("",)
+            user_col = self.db.get_collection("user")
+            # cursor = user_col.find({'user_id': user_id})
+            # if cursor is None:
+            #     return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'token': dummy_token, 'terminal': terminal}}
             user_col.update_one(condition, update_data)
@@ -141,17 +140,19 @@ class User(db_conn.DBConn):
             if code != 200:
                 return code, message
 
-            user_col = self.conn["user"]
-            cursor = user_col.find({'user_id': user_id})
-            if cursor.count() == 1:
+            user_col = self.db.get_collection("user")
+            # cursor = user_col.find({'user_id': user_id})
+            num = user_col.count_documents({'user_id': user_id})
+            if num == 1:
                 user_col.delete_one({'user_id': user_id})
+                return 200, "ok"
             else:
                 return error.error_authorization_fail()
         except pymongo.errors.PyMongoError as e:
             return 528, "{}".format(str(e))
         except Exception as e:
             return 530, "{}".format(str(e))
-        return 200, "ok"
+        # return 200, "ok"
 
     def change_password(
         self, user_id: str, old_password: str, new_password: str
@@ -163,10 +164,10 @@ class User(db_conn.DBConn):
 
             terminal = "terminal_{}".format(str(time.time()))
             token = jwt_encode(user_id, terminal)
-            user_col = self.conn["user"]
-            cursor = user_col.find({'user_id': user_id})
-            if cursor.count() == 0:
-                return error.error_authorization_fail() + ("",)
+            user_col = self.db.get_collection("user")
+            # cursor = user_col.find({'user_id': user_id})
+            # if cursor is None:
+            #     return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'password': new_password, 'token': token, 'terminal': terminal}}
             user_col.update_one(condition, update_data)

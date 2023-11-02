@@ -7,7 +7,9 @@ class Store:
     database: str
 
     def __init__(self):
+        self.client = pymongo.MongoClient("mongodb://localhost:27017/")
         self.database = "be"
+        self.db = self.client.get_database(self.database)
         self.user_col = None
         self.user_store_col = None
         self.store_col = None
@@ -17,19 +19,26 @@ class Store:
 
     def init_collections(self):
         try:
-            conn = self.get_db_conn()
-            self.user_col = conn["user"]
-            self.user_col.create_index([("user_id", pymongo.TEXT)], unique=True)
-            self.user_store_col = conn["user_store"]
-            self.store_col = conn["store"]
-            self.new_order_col = conn["new_order"]
-            self.new_order_detail_col = conn["new_order_detail"]
-        except pymongo.errors.PyMongoError as e:
+            self.user_col = self.db.create_collection("user")
+            self.user_col.create_index([("user_id", 1)], unique=True)
+
+            self.user_store_col = self.db.create_collection("user_store")
+            self.user_col.create_index([("user_id", 1), ("store_id", 1)], unique=True)
+
+            self.store_col = self.db.create_collection("store")
+            self.user_col.create_index([("store_id", 1), ("book_id", 1)], unique=True)
+
+            self.new_order_col = self.db.create_collection("new_order")
+            self.user_col.create_index([("order_id", 1)], unique=True)
+
+            self.new_order_detail_col = self.db.create_collection("new_order_detail")
+            self.user_col.create_index([("order_id", 1), ("book_id", 1)], unique=True)
+
+        except Exception as e:
             logging.error(e)
 
     def get_db_conn(self):
-        client = pymongo.MongoClient("mongodb://localhost:27017/")
-        return client[self.database]
+        return self.db
 
 
 database_instance: Store = None
