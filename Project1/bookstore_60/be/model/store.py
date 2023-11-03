@@ -15,24 +15,26 @@ class Store:
         self.store_col = None
         self.new_order_col = None
         self.new_order_detail_col = None
-        self.history_order_col = None
         self.init_collections()
 
     def init_collections(self):
         try:
             self.user_col = self.db.create_collection("user")
-            self.user_col.create_index([("user_id", pymongo.TEXT)], unique=True)
+            self.user_col.create_index([("user_id", 1)], unique=True)
+
             self.user_store_col = self.db.create_collection("user_store")
-            self.user_store_col.create_index([("user_id", pymongo.TEXT), ("store_id", pymongo.TEXT)], unique=True)
+            self.user_col.create_index([("user_id", 1), ("store_id", 1)], unique=True)
+
             self.store_col = self.db.create_collection("store")
-            self.store_col.create_index([("store_id", pymongo.TEXT), ("book_id", pymongo.TEXT)], unique=True)
+            self.user_col.create_index([("store_id", 1), ("book_id", 1)], unique=True)
+
             self.new_order_col = self.db.create_collection("new_order")
-            self.new_order_col.create_index([("order_id", pymongo.TEXT)], unique=True)
+            self.user_col.create_index([("order_id", 1)], unique=True)
+
             self.new_order_detail_col = self.db.create_collection("new_order_detail")
-            self.new_order_detail_col.create_index([("order_id", pymongo.TEXT), ("book_id", pymongo.TEXT)], unique=True)
-            self.history_order_col = self.db.create_collection("history_order")
-            self.history_order_col.create_index([("order_id", pymongo.TEXT), ("user_id", pymongo.TEXT)], unique=True)
-        except pymongo.errors.PyMongoError as e:
+            self.user_col.create_index([("order_id", 1), ("book_id", 1)], unique=True)
+
+        except Exception as e:
             logging.error(e)
 
     def get_db_conn(self):

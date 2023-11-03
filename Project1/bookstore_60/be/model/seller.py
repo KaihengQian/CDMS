@@ -87,33 +87,3 @@ class Seller(db_conn.DBConn):
         except Exception as e:
             return 530, f"{str(e)}"
         return 200, "ok"
-
-    def deliver_book(self, user_id: str, store_id: str, order_id: str):
-        try:
-            if not self.user_id_exist(user_id):
-                return error.error_non_exist_user_id(user_id)
-            if not self.store_id_exist(store_id):
-                return error.error_non_exist_store_id(store_id)
-            history_order_col = self.db.get_collection("history_order")
-            order = history_order_col.find_one({"order_id": order_id})
-            if order is None:
-                return error.error_invalid_order_id(order_id)
-            is_cancelled = order.get("is_cancelled")
-            if is_cancelled:
-                return error.error_order_cancelled(order_id)
-            is_paid = order.get("is_paid")
-            if not is_paid:
-                return error.error_order_not_paid(order_id)
-
-            condition = {'order_id': order_id}
-            update_data = {'$set': {'is_delivered': True}}
-            history_order_col.update_one(condition, update_data)
-
-        except ConnectionFailure as cf:
-            return 528, f"{str(cf)}"
-        except OperationFailure as of:
-            return 528, f"{str(of)}"
-
-        except Exception as e:
-            return 530, f"{str(e)}"
-        return 200, "ok"
