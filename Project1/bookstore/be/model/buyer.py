@@ -1,4 +1,5 @@
 import pymongo
+from flask import jsonify
 from pymongo.errors import ConnectionFailure, OperationFailure
 import uuid
 import json
@@ -24,6 +25,7 @@ class Buyer(db_conn.DBConn):
             order_id = uid
 
             store_col = self.db.get_collection("store")
+            book_info_list = []
             for book_id, count in id_and_count:
                 book_info = store_col.find_one({"store_id": store_id, "book_id": book_id})
                 if book_info is None:
@@ -51,11 +53,31 @@ class Buyer(db_conn.DBConn):
                     "price": price
                 })
 
+                entry = {
+                    "book_id": book_id,
+                    "count": count,
+                    "price": price
+                }
+                book_info_list.append(entry)
+
             new_order_col = self.db.get_collection("new_order")
             new_order_col.insert_one({
                 "order_id": order_id,
                 "store_id": store_id,
                 "user_id": user_id
+            })
+
+            # 加入历史订单
+            history_order_col = self.db.get_collection("history_order")
+            history_order_col.insert_one({
+                "order_id": order_id,
+                "store_id": store_id,
+                "user_id": user_id,
+                "book_info": book_info_list,
+                "is_cancelled": 0,
+                "is_paid": 0,
+                "is_delivered": 0,
+                "is_received": 0
             })
 
         except ConnectionFailure as cf:
@@ -131,6 +153,16 @@ class Buyer(db_conn.DBConn):
 
             if buyer_update_res1.modified_count == 0:
                 return error.error_non_exist_user_id(buyer_id)
+
+            # 更新历史订单状态为已支付
+            history_order_col = self.db.get_collection("history_order")
+            order_now = history_order_col.find_one({"order_id": order_id})
+            if order_now is None:
+                return error.error_invalid_order_id(order_id)
+            history_order_col.update_one(
+                {"order_id": order_id, "user_id": user_id},
+                {"$set": {"is_paid": True}}
+            )
 
             order_del_res = new_order_col.delete_one({"order_id": order_id})
 
@@ -248,10 +280,51 @@ class Buyer(db_conn.DBConn):
 
         return 200, "ok"
 
-    def search_book(self, params):
-        title, author, content, tags, scope = params
+    def search_history_order(self, user_id, password, order_id, page, per_page):
         try:
-            
+            user_col = self.db.get_collection("user")
+            user = user_col.find_one({"user_id": user_id})
+
+            if user is None:
+                return error.error_authorization_fail()
+
+            if user.get("password") != password:
+                return error.error_authorization_fail()
+
+            order_col = self.db.get_collection("history_order")
+            if order_id is None:
+                order = order_col.find({"user_id": user_id})
+            else:
+                order = order_col.find_one({"order_id": order_id, "user_id": user_id})
+
+            if order is None:
+                return error.error_non_history_order(user_id)
+
+            res = None
+            if len(order) < per_page:
+                res = order
+            else:
+                start = (page - 1) * per_page
+                end = start + per_page
+                if start > len(order) - 1 or end > len(order) - 1:
+                    res = order[-per_page:]
+
+            return 200, jsonify({"results": res})
+
+        except Exception as e:
+            logging.info(f"530, {str(e)}")
+            return 530, f"{str(e)}", ""
+
+    def search_book(self, store_id, title, author, content, tags):
+        try:
+            store_col = self.db.get_collection("store")
+            if store_id is not None:
+                store_col = store_col.find({"store_id": store_id})
+            find_condition = {}
+            book_info = store_col.find(find_condition)
+
+            if book_info is None:
+                return error.error_non_search_result()
 
         except ConnectionFailure as cf:
             logging.info(f"528 Connection failed: {str(cf)}")

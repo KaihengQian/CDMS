@@ -13,8 +13,8 @@ error_code = {
     521: "not delivered, order id {}",
     522: "cancellation fail, order id {}",
     523: "not paid, order id {}",
-    524: "",
-    525: "",
+    524: "non search result",
+    525: "non history order, user id {}",
     526: "",
     527: "",
     528: "",
@@ -71,6 +71,14 @@ def error_order_cancellation_fail(order_id):
 
 def error_order_not_paid(order_id):
     return 523, error_code[523].format(order_id)
+
+
+def error_non_search_result():
+    return 524, error_code[524]
+
+
+def error_non_history_order(user_id):
+    return 525, error_code[525].format(user_id)
 
 
 def error_authorization_fail():
