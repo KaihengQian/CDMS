@@ -6,13 +6,6 @@ import pymongo.errors
 from be.model import error
 from be.model import db_conn
 
-# encode a json string like:
-#   {
-#       "user_id": [user name],
-#       "terminal": [terminal code],
-#       "timestamp": [ts]} to a JWT
-#   }
-
 
 def jwt_encode(user_id: str, terminal: str) -> str:
     encoded = jwt.encode(
@@ -23,12 +16,6 @@ def jwt_encode(user_id: str, terminal: str) -> str:
     return encoded.encode("utf-8").decode("utf-8")
 
 
-# decode a JWT to a json string like:
-#   {
-#       "user_id": [user name],
-#       "terminal": [terminal code],
-#       "timestamp": [ts]} to a JWT
-#   }
 def jwt_decode(encoded_token, user_id: str) -> str:
     decoded = jwt.decode(encoded_token, key=user_id, algorithms="HS256")
     return decoded
@@ -100,14 +87,10 @@ class User(db_conn.DBConn):
 
             token = jwt_encode(user_id, terminal)
             user_col = self.db.get_collection("user")
-            # cursor = user_col.find({'user_id': user_id})
-            # if cursor is None:
-            #     return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'token': token, 'terminal': terminal}}
             user_col.update_one(condition, update_data)
-        # except pymongo.errors.PyMongoError as e:
-        #     return 528, "{}".format(str(e)), ""
+
         except Exception as e:
             return 530, "{}".format(str(e)), ""
         return 200, "ok", token
@@ -122,14 +105,10 @@ class User(db_conn.DBConn):
             dummy_token = jwt_encode(user_id, terminal)
 
             user_col = self.db.get_collection("user")
-            # cursor = user_col.find({'user_id': user_id})
-            # if cursor is None:
-            #     return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'token': dummy_token, 'terminal': terminal}}
             user_col.update_one(condition, update_data)
-        except pymongo.errors.PyMongoError as e:
-            return 528, "{}".format(str(e))
+
         except Exception as e:
             return 530, "{}".format(str(e))
         return 200, "ok"
@@ -148,11 +127,9 @@ class User(db_conn.DBConn):
                 return 200, "ok"
             else:
                 return error.error_authorization_fail()
-        except pymongo.errors.PyMongoError as e:
-            return 528, "{}".format(str(e))
+
         except Exception as e:
             return 530, "{}".format(str(e))
-        # return 200, "ok"
 
     def change_password(
         self, user_id: str, old_password: str, new_password: str
@@ -165,14 +142,10 @@ class User(db_conn.DBConn):
             terminal = "terminal_{}".format(str(time.time()))
             token = jwt_encode(user_id, terminal)
             user_col = self.db.get_collection("user")
-            # cursor = user_col.find({'user_id': user_id})
-            # if cursor is None:
-            #     return error.error_authorization_fail() + ("",)
             condition = {'user_id': user_id}
             update_data = {'$set': {'password': new_password, 'token': token, 'terminal': terminal}}
             user_col.update_one(condition, update_data)
-        except pymongo.errors.PyMongoError as e:
-            return 528, "{}".format(str(e))
+
         except BaseException as e:
             return 530, "{}".format(str(e))
         return 200, "ok"

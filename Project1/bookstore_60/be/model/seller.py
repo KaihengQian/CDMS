@@ -1,6 +1,3 @@
-import json
-import pymongo
-from pymongo.errors import ConnectionFailure, OperationFailure
 from be.model import error
 from be.model import db_conn
 
@@ -33,11 +30,6 @@ class Seller(db_conn.DBConn):
                 "stock_level": stock_level
             })
 
-        except ConnectionFailure as cf:
-            return 528, f"{str(cf)}"
-        except OperationFailure as of:
-            return 528, f"{str(of)}"
-
         except Exception as e:
             return 530, f"{str(e)}"
 
@@ -60,11 +52,6 @@ class Seller(db_conn.DBConn):
                 {"$inc": {"stock_level": add_stock_level}}
             )
 
-        except ConnectionFailure as cf:
-            return 528, f"{str(cf)}"
-        except OperationFailure as of:
-            return 528, f"{str(of)}"
-
         except Exception as e:
             return 530, f"{str(e)}"
         return 200, "ok"
@@ -77,12 +64,10 @@ class Seller(db_conn.DBConn):
                 return error.error_exist_store_id(store_id)
 
             user_store_col = self.db.get_collection("user_store")
-            user_store_col.insert_one({"store_id": store_id, "user_id": user_id})
-
-        except ConnectionFailure as cf:
-            return 528, f"{str(cf)}"
-        except OperationFailure as of:
-            return 528, f"{str(of)}"
+            user_store_col.insert_one({
+                "store_id": store_id,
+                "user_id": user_id,
+            })
 
         except Exception as e:
             return 530, f"{str(e)}"

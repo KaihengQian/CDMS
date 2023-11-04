@@ -1,5 +1,3 @@
-import pymongo
-from pymongo.errors import ConnectionFailure, OperationFailure
 import uuid
 import json
 import logging
@@ -25,23 +23,21 @@ class Buyer(db_conn.DBConn):
 
             store_col = self.db.get_collection("store")
             for book_id, count in id_and_count:
-                book_info = store_col.find_one({"store_id": store_id, "book_id": book_id})
-                if book_info is None:
+                store_data = store_col.find_one({"store_id": store_id, "book_id": book_id})
+                if store_data is None:
                     return error.error_non_exist_book_id(book_id) + (order_id,)
 
-                stock_level = book_info.get("stock_level")
-                price = book_info.get("book_info").get("price")
+                stock_level = store_data["stock_level"]
+                book_info = json.loads(store_data["book_info"])
+                price = book_info["price"]
 
                 if stock_level < count:
                     return error.error_stock_level_low(book_id) + (order_id,)
 
-                result = store_col.update_one(
+                store_col.update_one(
                     {"store_id": store_id, "book_id": book_id, "stock_level": {"$gte": count}},
                     {"$inc": {"stock_level": -count}}
                 )
-
-                if result.modified_count == 0:
-                    return error.error_stock_level_low(book_id) + (order_id,)
 
                 new_order_detail_col = self.db.get_collection("new_order_detail")
                 new_order_detail_col.insert_one({
@@ -53,17 +49,10 @@ class Buyer(db_conn.DBConn):
 
             new_order_col = self.db.get_collection("new_order")
             new_order_col.insert_one({
-                "order_id": order_id,
+                "order_id": uid,
                 "store_id": store_id,
                 "user_id": user_id
             })
-
-        except ConnectionFailure as cf:
-            logging.info(f"528 Connection failed: {str(cf)}")
-            return 528, f"{str(cf)}", ""
-        except OperationFailure as of:
-            logging.info(f"528 Operation failed: {str(of)}")
-            return 528, f"{str(of)}", ""
 
         except Exception as e:
             logging.info(f"530, {str(e)}")
@@ -78,7 +67,6 @@ class Buyer(db_conn.DBConn):
             if order is None:
                 return error.error_invalid_order_id(order_id)
 
-            order_id = order.get("order_id")
             buyer_id = order.get("user_id")
             store_id = order.get("store_id")
 
@@ -91,26 +79,26 @@ class Buyer(db_conn.DBConn):
                 return error.error_non_exist_user_id(buyer_id)
             balance = buyer.get("balance")
 
-            if password != buyer.get("password"):
+            if password != buyer["password"]:
                 return error.error_authorization_fail()
 
             user_store_col = self.db.get_collection("user_store")
-            store = user_store_col.find_one({"store_id": store_id})
-            if store is None:
+            store_data = user_store_col.find_one({"store_id": store_id})
+            if store_data is None:
                 return error.error_non_exist_store_id(store_id)
 
-            seller_id = store.get("user_id")
+            seller_id = store_data.get("user_id")
 
             if not self.user_id_exist(seller_id):
                 return error.error_non_exist_user_id(seller_id)
 
+            total_price = 0
             new_order_detail_col = self.db.get_collection("new_order_detail")
             order_details = new_order_detail_col.find({"order_id": order_id})
-            total_price = 0
 
             for detail in order_details:
-                count = detail.get("count")
-                price = detail.get("price")
+                count = detail["count"]
+                price = detail["price"]
                 total_price += (price * count)
 
             if balance < total_price:
@@ -132,22 +120,9 @@ class Buyer(db_conn.DBConn):
             if buyer_update_res1.modified_count == 0:
                 return error.error_non_exist_user_id(buyer_id)
 
-            order_del_res = new_order_col.delete_one({"order_id": order_id})
+            new_order_col.delete_one({"order_id": order_id})
 
-            if order_del_res.deleted_count == 0:
-                return error.error_invalid_order_id(order_id)
-
-            order_detail_del_res = new_order_detail_col.delete_one({"order_id": order_id})
-
-            if order_detail_del_res.deleted_count == 0:
-                return error.error_invalid_order_id(order_id)
-
-        except ConnectionFailure as cf:
-            logging.info(f"528 Connection failed: {str(cf)}")
-            return 528, f"{str(cf)}", ""
-        except OperationFailure as of:
-            logging.info(f"528 Operation failed: {str(of)}")
-            return 528, f"{str(of)}", ""
+            new_order_detail_col.delete_many({"order_id": order_id})
 
         except Exception as e:
             logging.info(f"530, {str(e)}")
@@ -166,20 +141,11 @@ class Buyer(db_conn.DBConn):
             if user.get("password") != password:
                 return error.error_authorization_fail()
 
-            user_update_res = user_col.update_one(
+            user_col.update_one(
                 {"user_id": user_id},
                 {"$inc": {"balance": add_value}}
             )
 
-            if user_update_res.modified_count == 0:
-                return error.error_non_exist_user_id(user_id)
-
-        except ConnectionFailure as cf:
-            logging.info(f"528 Connection failed: {str(cf)}")
-            return 528, f"{str(cf)}", ""
-        except OperationFailure as of:
-            logging.info(f"528 Operation failed: {str(of)}")
-            return 528, f"{str(of)}", ""
         except Exception as e:
             logging.info(f"530, {str(e)}")
             return 530, f"{str(e)}", ""

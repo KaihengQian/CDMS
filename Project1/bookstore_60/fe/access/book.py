@@ -2,7 +2,6 @@ import os
 import sqlite3 as sqlite
 import random
 import base64
-import simplejson as json
 
 
 class Book:
@@ -29,7 +28,7 @@ class Book:
 
 
 class BookDB:
-    def __init__(self, large: bool = False):
+    def __init__(self, large: bool = True):
         parent_path = os.path.dirname(os.path.dirname(__file__))
         self.db_s = os.path.join(parent_path, "data/book.db")
         self.db_l = os.path.join(parent_path, "data/book_lx.db")
@@ -69,7 +68,6 @@ class BookDB:
             book.pages = row[7]
             book.price = row[8]
 
-            book.currency_unit = row[9]
             book.binding = row[10]
             book.isbn = row[11]
             book.author_intro = row[12]
@@ -87,10 +85,5 @@ class BookDB:
                     encode_str = base64.b64encode(picture).decode("utf-8")
                     book.pictures.append(encode_str)
             books.append(book)
-            # print(tags.decode('utf-8'))
-
-            # print(book.tags, len(book.picture))
-            # print(book)
-            # print(tags)
 
         return books

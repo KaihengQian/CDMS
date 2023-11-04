@@ -1,6 +1,7 @@
 import pytest
 from fe.access.new_seller import register_new_seller
 from fe.access import book
+from fe import conf
 import uuid
 
 
@@ -14,7 +15,7 @@ class TestAddStockLevel:
 
         code = self.seller.create_store(self.store_id)
         assert code == 200
-        book_db = book.BookDB()
+        book_db = book.BookDB(conf.Use_Large_DB)
         self.books = book_db.get_book_info(0, 5)
         for bk in self.books:
             code = self.seller.add_book(self.store_id, 0, bk)
