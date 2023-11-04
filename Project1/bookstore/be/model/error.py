@@ -14,7 +14,7 @@ error_code = {
     522: "cancellation fail, order id {}",
     523: "not paid, order id {}",
     524: "non search result",
-    525: "non history order, user id {}",
+    525: "non exist order, user id {}",
     526: "",
     527: "",
     528: "",

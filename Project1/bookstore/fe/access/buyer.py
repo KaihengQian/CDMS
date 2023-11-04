@@ -69,10 +69,14 @@ class Buyer:
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
 
+    def overtime_cancel_order(self, order_id: str):
+        url = urljoin(self.url_prefix, "overtime_cancel_order")
+        r = requests.post(url)
+        return r.status_code
+
     def search_history_order(self, order_id, page=1, per_page=3) -> int:
         json = {
             "user_id": self.user_id,
-            "password": self.password,
             "order_id": order_id
         }
         params = {

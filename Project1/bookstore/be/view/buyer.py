@@ -51,6 +51,13 @@ def receive_book():
     return jsonify({"message": message}), code
 
 
+@bp_buyer.route("/overtime_cancel_order", methods=["POST"])
+def overtime_cancel_order():
+    b = Buyer()
+    code, message = b.overtime_cancel_order()
+    return jsonify({"message": message}), code
+
+
 @bp_buyer.route("/cancel_order", methods=["POST"])
 def cancel_order():
     user_id = request.json.get("user_id")
@@ -75,7 +82,6 @@ def search_book():
 @bp_buyer.route("/search_history_order", methods=["POST"])
 def search_history_order():
     user_id = request.json.get("user_id")
-    password = request.json.get("password")
     order_id = request.json.get("order_id")
 
     # 分页参数
@@ -83,5 +89,5 @@ def search_history_order():
     per_page = int(request.args.get("per_page", 3))  # 每页显示的条目数，默认为3
 
     b = Buyer()
-    code, message = b.search_history_order(user_id, password, order_id, page, per_page)
+    code, message = b.search_history_order(user_id, order_id, page, per_page)
     return jsonify({"message": message}), code

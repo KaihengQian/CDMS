@@ -6,6 +6,7 @@ import json
 import logging
 from be.model import db_conn
 from be.model import error
+from datetime import datetime
 
 
 class Buyer(db_conn.DBConn):
@@ -22,7 +23,7 @@ class Buyer(db_conn.DBConn):
             if not self.store_id_exist(store_id):
                 return error.error_non_exist_store_id(store_id) + (order_id,)
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
-            order_id = uid
+            print(uid)
 
             store_col = self.db.get_collection("store")
             book_info_list = []
@@ -32,7 +33,7 @@ class Buyer(db_conn.DBConn):
                     return error.error_non_exist_book_id(book_id) + (order_id,)
 
                 stock_level = book_info.get("stock_level")
-                price = book_info.get("book_info").get("price")
+                price = eval(book_info.get("book_info")).get("price")
 
                 if stock_level < count:
                     return error.error_stock_level_low(book_id) + (order_id,)
@@ -62,7 +63,7 @@ class Buyer(db_conn.DBConn):
 
             new_order_col = self.db.get_collection("new_order")
             new_order_col.insert_one({
-                "order_id": order_id,
+                "order_id": uid,
                 "store_id": store_id,
                 "user_id": user_id
             })
@@ -70,15 +71,16 @@ class Buyer(db_conn.DBConn):
             # 加入历史订单
             history_order_col = self.db.get_collection("history_order")
             history_order_col.insert_one({
-                "order_id": order_id,
+                "order_id": uid,
                 "store_id": store_id,
                 "user_id": user_id,
                 "book_info": book_info_list,
-                "is_cancelled": 0,
-                "is_paid": 0,
-                "is_delivered": 0,
-                "is_received": 0
+                "is_cancelled": False,
+                "is_paid": False,
+                "is_delivered": False,
+                "is_received": False
             })
+            order_id = uid
 
         except ConnectionFailure as cf:
             logging.info(f"528 Connection failed: {str(cf)}")
@@ -260,13 +262,34 @@ class Buyer(db_conn.DBConn):
             is_cancelled = order.get("is_cancelled")
             if is_cancelled:
                 return error.error_order_cancelled(order_id)
-            is_paid = order.get("is_delivered")
+            is_paid = order.get("is_paid")
             if is_paid:
                 return error.error_order_cancellation_fail(order_id)
 
             condition = {'order_id': order_id}
             update_data = {'$set': {'is_cancelled': True}}
             history_order_col.update_one(condition, update_data)
+
+            store_col = self.db.get_collection("store")
+            store_id = order.get("store_id")
+            book_id = order.get("book_id")
+            count = order.get("count")
+            store_col.update_one(
+                {"store_id": store_id, "book_id": book_id},
+                {"$inc": {"stock_level": count}}
+            )
+
+            new_order_col = self.db.get_collection("new_order")
+            order_del_res = new_order_col.delete_one({"order_id": order_id})
+
+            if order_del_res.deleted_count == 0:
+                return error.error_invalid_order_id(order_id)
+
+            new_order_detail_col = self.db.get_collection("new_order_detail")
+            order_detail_del_res = new_order_detail_col.delete_one({"order_id": order_id})
+
+            if order_detail_del_res.deleted_count == 0:
+                return error.error_invalid_order_id(order_id)
 
         except ConnectionFailure as cf:
             logging.info(f"528 Connection failed: {str(cf)}")
@@ -280,7 +303,68 @@ class Buyer(db_conn.DBConn):
 
         return 200, "ok"
 
-    def search_history_order(self, user_id, password, order_id, page, per_page):
+    def overtime_cancel_order(self):
+        try:
+            living_time = 60
+
+            history_order_col = self.db.get_collection("history_order")
+            orders = history_order_col.find({})
+            if orders is None:
+                return 200, "ok"
+
+            num_cancelled = 0
+
+            for order in orders:
+                order_id = order.get("order_id")
+                user_id = order.get("user_id")
+                is_cancelled = order.get("is_cancelled")
+                is_paid = order.get("is_paid")
+                if is_cancelled or is_paid:
+                    continue
+
+                parts = order_id.split("_")
+                uid_time = parts[2]
+                # 转换 UUID 时间戳为可读的时间格式
+                uuid_time = datetime.fromtimestamp(uuid.UUID(uid_time).time / 1e7 - 12219292800)
+                # 计算时间差
+                current_time = datetime.now()
+                time_passed = (current_time - uuid_time).total_seconds()
+                if time_passed > living_time:
+                    history_order_col.update_one(
+                        {"order_id": order_id, "user_id": user_id},
+                        {"$set": {"is_cancelled": True}}
+                    )
+
+                    store_col = self.db.get_collection("store")
+                    store_id = order.get("store_id")
+                    book_id = order.get("book_id")
+                    count = order.get("count")
+                    store_col.update_one(
+                        {"store_id": store_id, "book_id": book_id},
+                        {"$inc": {"stock_level": count}}
+                    )
+
+                    new_order_col = self.db.get_collection("new_order")
+                    order_del_res = new_order_col.delete_one({"order_id": order_id})
+
+                    if order_del_res.deleted_count == 0:
+                        return error.error_invalid_order_id(order_id)
+
+                    new_order_detail_col = self.db.get_collection("new_order_detail")
+                    order_detail_del_res = new_order_detail_col.delete_one({"order_id": order_id})
+
+                    if order_detail_del_res.deleted_count == 0:
+                        return error.error_invalid_order_id(order_id)
+
+                    num_cancelled += 1
+
+            return 200, "ok, {} orders cancelled".format(num_cancelled)
+
+        except Exception as e:
+            logging.info(f"530, {str(e)}")
+            return 530, f"{str(e)}", ""
+
+    def search_history_order(self, user_id, order_id, page, per_page):
         try:
             user_col = self.db.get_collection("user")
             user = user_col.find_one({"user_id": user_id})
@@ -288,32 +372,31 @@ class Buyer(db_conn.DBConn):
             if user is None:
                 return error.error_authorization_fail()
 
-            if user.get("password") != password:
-                return error.error_authorization_fail()
-
             order_col = self.db.get_collection("history_order")
-            if order_id is None:
+            if order_id == "":
                 order = order_col.find({"user_id": user_id})
+                num_order = sum(1 for _ in order)
+                if num_order > per_page:
+                    start = (page - 1) * per_page
+                    end = start + per_page
+                    if end > num_order:
+                        order = order.find({}).sort([("_id", -1)]).limit(per_page)
+                    else:
+                        order = order.find({}).skip(start).limit(end - start + 1)
+                order.rewind()
+                res = list(order)
             else:
                 order = order_col.find_one({"order_id": order_id, "user_id": user_id})
+                res = order
 
             if order is None:
                 return error.error_non_history_order(user_id)
 
-            res = None
-            if len(order) < per_page:
-                res = order
-            else:
-                start = (page - 1) * per_page
-                end = start + per_page
-                if start > len(order) - 1 or end > len(order) - 1:
-                    res = order[-per_page:]
-
-            return 200, jsonify({"results": res})
+            return 200, f"{str(res)}"
 
         except Exception as e:
             logging.info(f"530, {str(e)}")
-            return 530, f"{str(e)}", ""
+            return 530, f"{str(e)}"
 
     def search_book(self, store_id, title, author, content, tags):
         try:
