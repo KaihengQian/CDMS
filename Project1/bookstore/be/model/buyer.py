@@ -305,7 +305,7 @@ class Buyer(db_conn.DBConn):
 
     def overtime_cancel_order(self):
         try:
-            living_time = 60
+            living_time = 15 * 60
 
             history_order_col = self.db.get_collection("history_order")
             orders = history_order_col.find({})
@@ -409,8 +409,12 @@ class Buyer(db_conn.DBConn):
             find_condition = {}
             if store_id != "":
                 store_col = self.db.get_collection("store")
-                book_id_store = []
                 book_ids = store_col.find({"store_id": store_id})
+                num_book_ids = sum(1 for _ in book_ids)
+                if num_book_ids == 0:
+                    return error.error_non_exist_store_id(store_id)
+
+                book_id_store = []
                 for book in book_ids:
                     book_id_store.append(book["book_id"])
                 find_condition["id"] = {"$in": book_id_store}

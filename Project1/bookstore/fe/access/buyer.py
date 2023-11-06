@@ -69,7 +69,7 @@ class Buyer:
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
 
-    def overtime_cancel_order(self, order_id: str):
+    def overtime_cancel_order(self):
         url = urljoin(self.url_prefix, "overtime_cancel_order")
         r = requests.post(url)
         return r.status_code
