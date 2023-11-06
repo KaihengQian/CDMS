@@ -301,7 +301,7 @@ class Buyer(db_conn.DBConn):
             logging.info(f"530, {str(e)}")
             return 530, f"{str(e)}", ""
 
-        return 200, "ok"
+        return 200, "ok, order cancelled"
 
     def overtime_cancel_order(self):
         try:
@@ -309,7 +309,8 @@ class Buyer(db_conn.DBConn):
 
             history_order_col = self.db.get_collection("history_order")
             orders = history_order_col.find({})
-            if orders is None:
+            num_orders = sum(1 for _ in orders)
+            if num_orders == 0:
                 return 200, "ok"
 
             num_cancelled = 0
@@ -358,11 +359,11 @@ class Buyer(db_conn.DBConn):
 
                     num_cancelled += 1
 
-            return 200, "ok, {} orders cancelled".format(num_cancelled)
-
         except Exception as e:
             logging.info(f"530, {str(e)}")
             return 530, f"{str(e)}", ""
+
+        return 200, "ok, {} orders cancelled".format(num_cancelled)
 
     def search_history_order(self, user_id, order_id, page, per_page):
         try:
@@ -375,7 +376,11 @@ class Buyer(db_conn.DBConn):
             order_col = self.db.get_collection("history_order")
             if order_id == "":
                 order = order_col.find({"user_id": user_id})
+
                 num_order = sum(1 for _ in order)
+                if num_order == 0:
+                    return error.error_non_history_order(user_id)
+
                 if num_order > per_page:
                     start = (page - 1) * per_page
                     end = start + per_page
@@ -387,36 +392,165 @@ class Buyer(db_conn.DBConn):
                 res = list(order)
             else:
                 order = order_col.find_one({"order_id": order_id, "user_id": user_id})
+
+                if order is None:
+                    return error.error_non_history_order(user_id)
+
                 res = order
-
-            if order is None:
-                return error.error_non_history_order(user_id)
-
-            return 200, f"{str(res)}"
 
         except Exception as e:
             logging.info(f"530, {str(e)}")
             return 530, f"{str(e)}"
 
-    def search_book(self, store_id, title, author, content, tags):
-        try:
-            store_col = self.db.get_collection("store")
-            if store_id is not None:
-                store_col = store_col.find({"store_id": store_id})
-            find_condition = {}
-            book_info = store_col.find(find_condition)
+        return 200, f"{str(res)}"
 
-            if book_info is None:
+    def search_book(self, store_id, title, author, intro, content, tags, page, per_page):
+        try:
+            find_condition = {}
+            if store_id != "":
+                store_col = self.db.get_collection("store")
+                book_id_store = []
+                book_ids = store_col.find({"store_id": store_id})
+                for book in book_ids:
+                    book_id_store.append(book["book_id"])
+                find_condition["id"] = {"$in": book_id_store}
+            if title != "":
+                find_condition["$text"] = {"$search": title}
+            if author != "":
+                find_condition["author"] = author
+            if intro != "":
+                find_condition["$text"] = {"$search": intro}
+            if content != "":
+                find_condition["$text"] = {"$search": content}
+            if tags:
+                find_condition["tags"] = {"$in": tags}
+
+            book_detail_col = self.db.get_collection("book_detail")
+            book_info = book_detail_col.find(find_condition)
+
+            num_book = sum(1 for _ in book_info)
+            if num_book == 0:
                 return error.error_non_search_result()
+
+            if num_book > per_page:
+                start = (page - 1) * per_page
+                end = start + per_page
+                if end > num_book:
+                    book_info = book_info.find({}).sort([("_id", -1)]).limit(per_page)
+                else:
+                    book_info = book_info.find({}).skip(start).limit(end - start + 1)
+            book_info.rewind()
+            res = list(book_info)
 
         except ConnectionFailure as cf:
             logging.info(f"528 Connection failed: {str(cf)}")
-            return 528, f"{str(cf)}", ""
+            return 528, f"{str(cf)}"
         except OperationFailure as of:
             logging.info(f"528 Operation failed: {str(of)}")
-            return 528, f"{str(of)}", ""
+            return 528, f"{str(of)}"
+        except Exception as e:
+            logging.info(f"530, {str(e)}")
+            return 530, f"{str(e)}"
+
+        return 200, f"{str(res)}"
+
+    '''
+    def search_book(self, store_id, author, tags, title, content, intro, page, per_page):
+        try:
+            store_col = self.db.get_collection("store")
+            book_detail_col = self.db.get_collection("book_detail")
+            find_condition = {}
+
+            if store_id != "":
+                book_id_store = []
+                book_ids = store_col.find({"store_id": store_id})
+                for book in book_ids:
+                    book_id_store.append(book["book_id"])
+                find_condition["id"] = {"$in": book_id_store}
+
+                if author != "":
+                    find_condition["author"] = author
+                if tags:
+                    find_condition["tags"] = {"$in": tags}
+
+                book1 = book_detail_col.find(find_condition, {"_id": 0, "id": 1})
+                book_id1 = []
+                for book in book1:
+                    book_id1.append(book["book_id"])
+
+                book_id2 = []
+                if title != "":
+                    book_id2 = self.search_with_title(title, book_id1)
+
+                book_id3 = []
+                if content != "":
+                    book_id3 = self.search_with_content(content, book_id2)
+
+                book_id4 = []
+                if intro != "":
+                    book_id4 = self.search_with_intro(intro, book_id3)
+
+                book_info_res = book_detail_col.find({"id": {"$in": book_id4}})
+
+            else:
+                if author != "":
+                    find_condition["author"] = author
+                if tags:
+                    find_condition["tags"] = {"$in": tags}
+
+                book1 = book_detail_col.find(find_condition, {"_id": 0, "id": 1})
+                book_id1 = []
+                for book in book1:
+                    book_id1.append(book["book_id"])
+
+                book_id2 = []
+                if title != "":
+                    book_id2 = self.search_with_title(title, book_id1)
+
+                book_id3 = []
+                if content != "":
+                    book_id3 = self.search_with_content(content, book_id2)
+
+                book_id4 = []
+                if intro != "":
+                    book_id4 = self.search_with_intro(intro, book_id3)
+
+                book_info_res = book_detail_col.find({"id": {"$in": book_id4}})
+
+            num_book = sum(1 for _ in book_info_res)
+            if num_book == 0:
+                return error.error_non_search_result()
+
+            book_info_res.rewind()
+            res = list(book_info_res)
+
         except Exception as e:
             logging.info(f"530, {str(e)}")
             return 530, f"{str(e)}", ""
 
-        return 200, "ok"
+        return 200, f"{str(res)}"
+
+    def search_with_title(self, title, book_id):
+        book_detail_col = self.db.get_collection("book_detail")
+        res = []
+        books = book_detail_col.find({"id": {"$in": book_id}, "$text": {"$search": title}})
+        for book in books:
+            res.append(book["book_id"])
+        return res
+
+    def search_with_content(self, content, book_id):
+        book_detail_col = self.db.get_collection("book_detail")
+        res = []
+        books = book_detail_col.find({"id": {"$in": book_id}, "$text": {"$search": content}})
+        for book in books:
+            res.append(book["book_id"])
+        return res
+
+    def search_with_intro(self, intro, book_id):
+        book_detail_col = self.db.get_collection("book_detail")
+        res = []
+        books = book_detail_col.find({"id": {"$in": book_id}, "$text": {"$search": intro}})
+        for book in books:
+            res.append(book["book_id"])
+        return res
+    '''

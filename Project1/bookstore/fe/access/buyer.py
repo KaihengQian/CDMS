@@ -88,15 +88,20 @@ class Buyer:
         r = requests.post(url, headers=headers, params=params, json=json)
         return r.status_code
 
-    def search_book(self, store_id, title, author, content, tags):
+    def search_book(self, store_id, title, author, book_intro, content, tags, page=1, per_page=3):
         json = {
             "store_id": store_id,
             "title": title,
             "author": author,
+            "book_intro": book_intro,
             "content": content,
             "tags": tags,
         }
+        params = {
+            "page": page,
+            "per_page": per_page
+        }
         url = urljoin(self.url_prefix, "search_book")
         headers = {"token": self.token}
-        r = requests.post(url, headers=headers, json=json)
+        r = requests.post(url, headers=headers, params=params, json=json)
         return r.status_code

@@ -72,10 +72,16 @@ def search_book():
     store_id = request.json.get("store_id")
     title = request.json.get("title")
     author = request.json.get("author")
+    book_intro = request.json.get("book_intro")
     content = request.json.get("content")
     tags = request.json.get("tags")
+
+    # 分页参数
+    page = int(request.args.get("page", 1))  # 当前选中页面数
+    per_page = int(request.args.get("per_page", 3))  # 每页显示的条目数，默认为3
+
     b = Buyer()
-    code, message = b.search_book(store_id, title, author, content, tags)
+    code, message = b.search_book(store_id, title, author, book_intro, content, tags, page, per_page)
     return jsonify({"message": message}), code
 
 

@@ -16,22 +16,39 @@ class Store:
         self.new_order_col = None
         self.new_order_detail_col = None
         self.history_order_col = None
+        self.book_detail_col = None
         self.init_collections()
 
     def init_collections(self):
         try:
             self.user_col = self.db.create_collection("user")
             self.user_col.create_index([("user_id", pymongo.ASCENDING)], unique=True)
+
             self.user_store_col = self.db.create_collection("user_store")
             self.user_store_col.create_index([("user_id", pymongo.ASCENDING), ("store_id", pymongo.ASCENDING)], unique=True)
+
             self.store_col = self.db.create_collection("store")
             self.store_col.create_index([("store_id", pymongo.ASCENDING), ("book_id", pymongo.ASCENDING)], unique=True)
+
             self.new_order_col = self.db.create_collection("new_order")
             self.new_order_col.create_index([("order_id", pymongo.ASCENDING)], unique=True)
+
             self.new_order_detail_col = self.db.create_collection("new_order_detail")
             self.new_order_detail_col.create_index([("order_id", pymongo.ASCENDING)], unique=True)
+
             self.history_order_col = self.db.create_collection("history_order")
             self.history_order_col.create_index([("order_id", pymongo.ASCENDING), ("user_id", pymongo.ASCENDING)], unique=True)
+
+            self.book_detail_col = self.db.create_collection("book_detail")
+            self.book_detail_col.create_index([("tags", pymongo.ASCENDING)])
+            self.book_detail_col.create_index([("id", pymongo.ASCENDING)], unique=True)
+            self.book_detail_col.create_index([("author", pymongo.ASCENDING)])
+            self.book_detail_col.create_index([
+                ("title", pymongo.TEXT),
+                ("book_intro", pymongo.TEXT),
+                ("content", pymongo.TEXT)
+            ], name="combined_text_index", default_language="chinese")
+
         except pymongo.errors.PyMongoError as e:
             logging.error(e)
 
