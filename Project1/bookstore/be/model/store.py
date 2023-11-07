@@ -41,13 +41,9 @@ class Store:
 
             self.book_detail_col = self.db.create_collection("book_detail")
             self.book_detail_col.create_index([("tags", pymongo.ASCENDING)])
-            self.book_detail_col.create_index([("id", pymongo.ASCENDING)], unique=True)
+            self.book_detail_col.create_index([("book_id", pymongo.ASCENDING)], unique=True)
             self.book_detail_col.create_index([("author", pymongo.ASCENDING)])
-            self.book_detail_col.create_index([
-                ("title", pymongo.TEXT),
-                ("book_intro", pymongo.TEXT),
-                ("content", pymongo.TEXT)
-            ], name="combined_text_index", default_language="chinese")
+            self.book_detail_col.create_index([("description", "text")])  # 所有文本信息
 
         except pymongo.errors.PyMongoError as e:
             logging.error(e)
