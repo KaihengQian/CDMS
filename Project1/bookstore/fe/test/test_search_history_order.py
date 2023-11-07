@@ -26,11 +26,11 @@ class TestSearchHistoryOrder:
             code, _ = self.buyer.new_order(self.store_id, buy_book_id_list)
             assert code == 200
 
-        code, _ = self.buyer.search_history_order(order_id="", page=1, per_page=3)
+        code = self.buyer.search_history_order(order_id="", page=1, per_page=3)
         assert code == 200
 
     def test_non_history_order(self):
-        code, _ = self.buyer.search_history_order(order_id="", page=1, per_page=3)
+        code = self.buyer.search_history_order(order_id="", page=1, per_page=3)
         assert code != 200
 
     def test_non_exist_user_id(self):
@@ -47,5 +47,5 @@ class TestSearchHistoryOrder:
             assert code == 200
 
         self.buyer.user_id = self.buyer.user_id + "_x"
-        code, _ = self.buyer.search_history_order(order_id="")
+        code = self.buyer.search_history_order(order_id="")
         assert code != 200

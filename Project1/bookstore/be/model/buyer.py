@@ -550,16 +550,15 @@ class Buyer(db_conn.DBConn):
                     if num_book == 0:
                         return error.error_non_search_result()
 
+                    book_info.rewind()
+                    res = list(book_info)
                     if num_book > per_page:
-                        book_info.rewind()
                         start = (page - 1) * per_page
                         end = start + per_page
                         if end > num_book:
-                            book_info = book_info.find({}).sort([("_id", -1)]).limit(per_page)
+                            res = res[-per_page:]
                         else:
-                            book_info = book_info.find({}).skip(start).limit(end - start + 1)
-                    book_info.rewind()
-                    res = list(book_info)
+                            res = res[start:end]
 
                 return 200, f"{str(res)}"
 
@@ -619,16 +618,15 @@ class Buyer(db_conn.DBConn):
                     if num_book == 0:
                         return error.error_non_search_result()
 
+                    book_info.rewind()
+                    res = list(book_info)
                     if num_book > per_page:
-                        book_info.rewind()
                         start = (page - 1) * per_page
                         end = start + per_page
                         if end > num_book:
-                            book_info = book_info.find({}).sort([("_id", -1)]).limit(per_page)
+                            res = res[-per_page:]
                         else:
-                            book_info = book_info.find({}).skip(start).limit(end - start + 1)
-                    book_info.rewind()
-                    res = list(book_info)
+                            res = res[start:end]
 
                 return 200, f"{str(res)}"
 
