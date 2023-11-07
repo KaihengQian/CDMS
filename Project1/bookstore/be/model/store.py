@@ -34,7 +34,7 @@ class Store:
             self.new_order_col.create_index([("order_id", pymongo.ASCENDING)], unique=True)
 
             self.new_order_detail_col = self.db.create_collection("new_order_detail")
-            self.new_order_detail_col.create_index([("order_id", pymongo.ASCENDING)], unique=True)
+            self.new_order_detail_col.create_index([("order_id", pymongo.ASCENDING)])
 
             self.history_order_col = self.db.create_collection("history_order")
             self.history_order_col.create_index([("order_id", pymongo.ASCENDING), ("user_id", pymongo.ASCENDING)], unique=True)

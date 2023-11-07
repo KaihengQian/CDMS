@@ -274,12 +274,14 @@ class Buyer(db_conn.DBConn):
 
             store_col = self.db.get_collection("store")
             store_id = order.get("store_id")
-            book_id = order.get("book_id")
-            count = order.get("count")
-            store_col.update_one(
-                {"store_id": store_id, "book_id": book_id},
-                {"$inc": {"stock_level": count}}
-            )
+            book_info_list = order.get("book_info")
+            for book_info in book_info_list:
+                book_id = book_info.get("book_id")
+                count = book_info.get("count")
+                store_col.update_one(
+                    {"store_id": store_id, "book_id": book_id},
+                    {"$inc": {"stock_level": count}}
+                )
 
             new_order_col = self.db.get_collection("new_order")
             order_del_res = new_order_col.delete_one({"order_id": order_id})
@@ -288,7 +290,7 @@ class Buyer(db_conn.DBConn):
                 return error.error_invalid_order_id(order_id)
 
             new_order_detail_col = self.db.get_collection("new_order_detail")
-            order_detail_del_res = new_order_detail_col.delete_one({"order_id": order_id})
+            order_detail_del_res = new_order_detail_col.delete_many({"order_id": order_id})
 
             if order_detail_del_res.deleted_count == 0:
                 return error.error_invalid_order_id(order_id)
@@ -340,12 +342,14 @@ class Buyer(db_conn.DBConn):
 
                     store_col = self.db.get_collection("store")
                     store_id = order.get("store_id")
-                    book_id = order.get("book_id")
-                    count = order.get("count")
-                    store_col.update_one(
-                        {"store_id": store_id, "book_id": book_id},
-                        {"$inc": {"stock_level": count}}
-                    )
+                    book_info_list = order.get("book_info")
+                    for book_info in book_info_list:
+                        book_id = book_info.get("book_id")
+                        count = book_info.get("count")
+                        store_col.update_one(
+                            {"store_id": store_id, "book_id": book_id},
+                            {"$inc": {"stock_level": count}}
+                        )
 
                     new_order_col = self.db.get_collection("new_order")
                     order_del_res = new_order_col.delete_one({"order_id": order_id})
@@ -354,7 +358,7 @@ class Buyer(db_conn.DBConn):
                         return error.error_invalid_order_id(order_id)
 
                     new_order_detail_col = self.db.get_collection("new_order_detail")
-                    order_detail_del_res = new_order_detail_col.delete_one({"order_id": order_id})
+                    order_detail_del_res = new_order_detail_col.delete_many({"order_id": order_id})
 
                     if order_detail_del_res.deleted_count == 0:
                         return error.error_invalid_order_id(order_id)
@@ -377,23 +381,23 @@ class Buyer(db_conn.DBConn):
 
             order_col = self.db.get_collection("history_order")
             if order_id == "":
-                order = order_col.find({"user_id": user_id})
+                order = order_col.find({"user_id": user_id}, {"_id": 0})
 
                 num_order = sum(1 for _ in order)
                 if num_order == 0:
                     return error.error_non_history_order(user_id)
 
+                order.rewind()
+                res = list(order)
                 if num_order > per_page:
                     start = (page - 1) * per_page
                     end = start + per_page
                     if end > num_order:
-                        order = order.find({}).sort([("_id", -1)]).limit(per_page)
+                        res = res[-per_page:]
                     else:
-                        order = order.find({}).skip(start).limit(end - start + 1)
-                order.rewind()
-                res = list(order)
+                        res = res[start:end]
             else:
-                order = order_col.find_one({"order_id": order_id, "user_id": user_id})
+                order = order_col.find_one({"order_id": order_id, "user_id": user_id}, {"_id": 0})
 
                 if order is None:
                     return error.error_non_history_order(user_id)
@@ -530,16 +534,15 @@ class Buyer(db_conn.DBConn):
                     if num_book == 0:
                         return error.error_non_search_result()
 
+                    book_info.rewind()
+                    res = list(book_info)
                     if num_book > per_page:
-                        book_info.rewind()
                         start = (page - 1) * per_page
                         end = start + per_page
                         if end > num_book:
-                            book_info = book_info.find({}).sort([("_id", -1)]).limit(per_page)
+                            res = res[-per_page:]
                         else:
-                            book_info = book_info.find({}).skip(start).limit(end - start + 1)
-                    book_info.rewind()
-                    res = list(book_info)
+                            res = res[start:end]
 
                 else:
                     book_info = book1
@@ -600,16 +603,15 @@ class Buyer(db_conn.DBConn):
                     if num_book == 0:
                         return error.error_non_search_result()
 
+                    book_info.rewind()
+                    res = list(book_info)
                     if num_book > per_page:
-                        book_info.rewind()
                         start = (page - 1) * per_page
                         end = start + per_page
                         if end > num_book:
-                            book_info = book_info.find({}).sort([("_id", -1)]).limit(per_page)
+                            res = res[-per_page:]
                         else:
-                            book_info = book_info.find({}).skip(start).limit(end - start + 1)
-                    book_info.rewind()
-                    res = list(book_info)
+                            res = res[start:end]
 
                 else:
                     book_info = book1

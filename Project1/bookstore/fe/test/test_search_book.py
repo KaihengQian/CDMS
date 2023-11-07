@@ -24,7 +24,7 @@ class TestSearchBook:
         yield
 
     def test_ok(self):
-        code, _ = self.buyer.search_book(store_id="", title="", author="三毛", book_intro="", content="", tags=[])
+        code, _ = self.buyer.search_book(store_id=self.store_id, title="", author="", book_intro="", content="", tags=[])
         assert code == 200
 
     def test_non_search_result(self):
