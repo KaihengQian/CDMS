@@ -87,7 +87,7 @@ class TestDeliverBook:
         assert code != 200
 
     def test_cancelled_order(self):
-        code = self.buyer.cancel_order(self.order_id)
+        code = self.buyer.buyer_cancel_order(self.order_id)
         assert code == 200
 
         code = self.seller.deliver_book(self.seller.seller_id, self.store_id, self.order_id)

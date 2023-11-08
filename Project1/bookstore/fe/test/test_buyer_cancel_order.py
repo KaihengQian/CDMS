@@ -44,18 +44,18 @@ class TestCancelOrder:
         yield
 
     def test_ok(self):
-        code = self.buyer.cancel_order(self.order_id)
+        code = self.buyer.buyer_cancel_order(self.order_id)
         assert code == 200
 
     def test_invalid_order_id(self):
-        code = self.buyer.cancel_order(self.order_id + "_x")
+        code = self.buyer.buyer_cancel_order(self.order_id + "_x")
         assert code != 200
 
     def test_repeat_cancel(self):
-        code = self.buyer.cancel_order(self.order_id)
+        code = self.buyer.buyer_cancel_order(self.order_id)
         assert code == 200
 
-        code = self.buyer.cancel_order(self.order_id)
+        code = self.buyer.buyer_cancel_order(self.order_id)
         assert code != 200
 
     def test_cancel_paid_order(self):
@@ -64,5 +64,5 @@ class TestCancelOrder:
         code = self.buyer.payment(self.order_id)
         assert code == 200
 
-        code = self.buyer.cancel_order(self.order_id)
+        code = self.buyer.buyer_cancel_order(self.order_id)
         assert code != 200

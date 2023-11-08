@@ -59,12 +59,12 @@ class Buyer:
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
 
-    def cancel_order(self, order_id: str):
+    def buyer_cancel_order(self, order_id: str):
         json = {
             "user_id": self.user_id,
             "order_id": order_id,
         }
-        url = urljoin(self.url_prefix, "cancel_order")
+        url = urljoin(self.url_prefix, "buyer_cancel_order")
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
@@ -86,6 +86,7 @@ class Buyer:
         url = urljoin(self.url_prefix, "search_history_order")
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, params=params, json=json)
+        print(r.status_code)
         return r.status_code
 
     def search_book(self, store_id, title, author, book_intro, content, tags, page=1, per_page=3):

@@ -11,6 +11,7 @@ class Seller(db_conn.DBConn):
     def __init__(self):
         super().__init__()
 
+    # 分词
     def split_words(self, text):
         words = re.sub(r'[^\w\s\n]', '', text)
         words = re.sub(r'\n', '', words)
@@ -42,6 +43,7 @@ class Seller(db_conn.DBConn):
                 "stock_level": stock_level
             })
 
+            # 加入全站书籍名录
             book_detail_col = self.db.get_collection("book_detail")
             row = book_detail_col.find_one({'book_id': book_id})
             if row is None:
@@ -114,6 +116,7 @@ class Seller(db_conn.DBConn):
             return 530, f"{str(e)}"
         return 200, "ok"
 
+    # 发货
     def deliver_book(self, user_id: str, store_id: str, order_id: str):
         try:
             if not self.user_id_exist(user_id):
@@ -131,6 +134,7 @@ class Seller(db_conn.DBConn):
             if not is_paid:
                 return error.error_order_not_paid(order_id)
 
+            # 更新历史订单状态为已发货
             condition = {'order_id': order_id}
             update_data = {'$set': {'is_delivered': True}}
             history_order_col.update_one(condition, update_data)
