@@ -13,6 +13,10 @@ class TestSearchHistoryOrder:
         self.buyer = register_new_buyer(self.buyer_id, self.password)
         yield
 
+    def test_non_history_order(self):
+        code = self.buyer.search_history_order(order_id="", page=1, per_page=3)
+        assert code != 200
+
     def test_ok(self):
         for _ in range(3):
             self.seller_id = "test_search_history_order_seller_id_{}".format(str(uuid.uuid1()))
@@ -28,10 +32,6 @@ class TestSearchHistoryOrder:
 
         code = self.buyer.search_history_order(order_id="", page=1, per_page=3)
         assert code == 200
-
-    def test_non_history_order(self):
-        code = self.buyer.search_history_order(order_id="", page=1, per_page=3)
-        assert code != 200
 
     def test_non_exist_user_id(self):
         for _ in range(3):

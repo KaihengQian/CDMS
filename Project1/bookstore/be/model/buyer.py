@@ -369,7 +369,11 @@ class Buyer(db_conn.DBConn):
             if order_id == "":
                 order = order_col.find({"user_id": user_id}, {"_id": 0})
 
-                res = self.paging(order, page, per_page, user_id=user_id)
+                num_col = sum(1 for _ in order)
+                if num_col == 0:
+                    return error.error_non_history_order(user_id)
+
+                res = self.paging(order, page, per_page, num_col)
 
             else:
                 order = order_col.find_one({"order_id": order_id, "user_id": user_id}, {"_id": 0})
@@ -383,6 +387,7 @@ class Buyer(db_conn.DBConn):
             logging.info(f"530, {str(e)}")
             return 530, f"{str(e)}"
 
+        print(1)
         return 200, f"{str(res)}"
 
     # 搜索书籍
@@ -400,19 +405,23 @@ class Buyer(db_conn.DBConn):
                 if num_book_ids == 0:
                     return error.error_non_exist_store_id(store_id)
                 book_id_store = []
+                book_ids.rewind()
                 for book in book_ids:
                     book_id_store.append(book["book_id"])
                 find_condition["book_id"] = {"$in": book_id_store}
+                print(book_id_store)
 
                 # 根据作者和标签信息进行第二步筛选
                 if author != "":
                     find_condition["author"] = author
                 if tags:
                     find_condition["tags"] = {"$in": tags}
+                print(find_condition)
                 book1 = book_detail_col.find(find_condition, {"_id": 0, "description": 0})
                 book_id = []
                 for book in book1:
                     book_id.append(book["book_id"])
+                print(book_id)
 
                 # 根据文本信息（标题、内容、目录）进行第三步筛选
                 search_des = ""
@@ -439,10 +448,19 @@ class Buyer(db_conn.DBConn):
                     else:
                         return error.error_non_search_result()
 
-                    res = self.paging(book_info, page, per_page, user_id="")
+                    num_col = sum(1 for _ in book_info)
+                    if num_col == 0:
+                        return error.error_non_search_result()
+
+                    res = self.paging(book_info, page, per_page, num_col)
 
                 else:
-                    res = self.paging(book1, page, per_page, user_id="")
+                    book1.rewind()
+                    num_col = sum(1 for _ in book1)
+                    if num_col == 0:
+                        return error.error_non_search_result()
+
+                    res = self.paging(book1, page, per_page, num_col)
 
                 return 200, f"{str(res)}"
             # 全站搜索
@@ -482,10 +500,19 @@ class Buyer(db_conn.DBConn):
                     else:
                         return error.error_non_search_result()
 
-                    res = self.paging(book_info, page, per_page, user_id="")
+                    num_col = sum(1 for _ in book_info)
+                    if num_col == 0:
+                        return error.error_non_search_result()
+
+                    res = self.paging(book_info, page, per_page, num_col)
 
                 else:
-                    res = self.paging(book1, page, per_page, user_id="")
+                    book1.rewind()
+                    num_col = sum(1 for _ in book1)
+                    if num_col == 0:
+                        return error.error_non_search_result()
+
+                    res = self.paging(book1, page, per_page, num_col)
 
                 return 200, f"{str(res)}"
 
@@ -505,14 +532,7 @@ class Buyer(db_conn.DBConn):
         return res_list
 
     # 分页
-    def paging(self, cursor, page, per_page, user_id):
-        num_col = sum(1 for _ in cursor)
-        if num_col == 0:
-            if user_id == "":
-                return error.error_non_search_result()
-            else:
-                return error.error_non_history_order(user_id)
-
+    def paging(self, cursor, page, per_page, num_col):
         cursor.rewind()
         res = list(cursor)
         if num_col > per_page:
