@@ -1,9 +1,13 @@
-simplejson
-lxml
+simplejson~=3.19.2
+lxml~=4.9.2
 codecov
 coverage
-flask
+flask~=2.0.0
 pre - commit
-pytest
-PyJWT
-requests
+pytest~=7.4.3
+PyJWT~=2.8.0
+requests~=2.31.0
+
+pymongo~=4.5.0
+jieba~=0.42.1
+setuptools~=65.3.0
