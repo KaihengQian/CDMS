@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import Column, String, create_engine, Integer, ForeignKey
+from sqlalchemy import Column, String, create_engine, Integer, ForeignKey, Boolean, JSON, ARRAY
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 
@@ -47,6 +47,31 @@ class NewOrderDetail(Base):
     book_id = Column(String, primary_key=True, nullable=False)
     count = Column(Integer)
     price = Column(Integer)
+
+
+# 定义HistoryOrder对象
+class HistoryOrder(Base):
+    __tablename__ = 'history_order'
+    order_id = Column(String, primary_key=True, unique=True, nullable=False)
+    user_id = Column(String, primary_key=True, nullable=False)
+    store_id = Column(String)
+    book_info = Column(ARRAY(JSON))
+    is_cancelled = Column(Boolean)
+    is_paid = Column(Boolean)
+    is_delivered = Column(Boolean)
+    is_received = Column(Boolean)
+
+
+# 定义BookDetail对象
+class BookDetail(Base):
+    __tablename__ = 'book_detail'
+    book_id = Column(String, primary_key=True, unique=True, nullable=False)
+    title = Column(String)
+    author = Column(String)
+    book_intro = Column(String)
+    content = Column(String)
+    tags = Column(String)
+    description = Column(String)
 
 
 class Store:
