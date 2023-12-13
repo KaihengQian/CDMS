@@ -93,7 +93,10 @@ class User(db_conn.DBConn):
 
             token = jwt_encode(user_id, terminal)
 
-            self.conn.query(store.User).filter_by(user_id=user_id).update({'token': token, 'terminal': terminal})
+            rowcount = self.conn.query(store.User).filter_by(user_id=user_id).update({'token': token, 'terminal': terminal})
+            if rowcount == 0:
+                return error.error_authorization_fail() + ("",)
+
             self.conn.commit()
 
         except BaseException as e:
@@ -109,7 +112,10 @@ class User(db_conn.DBConn):
             terminal = "terminal_{}".format(str(time.time()))
             dummy_token = jwt_encode(user_id, terminal)
 
-            self.conn.query(store.User).filter_by(user_id=user_id).update({'token': dummy_token, 'terminal': terminal})
+            rowcount = self.conn.query(store.User).filter_by(user_id=user_id).update({'token': dummy_token, 'terminal': terminal})
+            if rowcount == 0:
+                return error.error_authorization_fail()
+
             self.conn.commit()
 
         except BaseException as e:
@@ -122,8 +128,11 @@ class User(db_conn.DBConn):
             if code != 200:
                 return code, message
 
-            self.conn.query(store.User).filter_by(user_id=user_id).delete()
-            self.conn.commit()
+            rowcount = self.conn.query(store.User).filter_by(user_id=user_id).delete()
+            if rowcount == 1:
+                self.conn.commit()
+            else:
+                return error.error_authorization_fail()
 
         except BaseException as e:
             return 530, "{}".format(str(e))
@@ -140,8 +149,11 @@ class User(db_conn.DBConn):
             terminal = "terminal_{}".format(str(time.time()))
             token = jwt_encode(user_id, terminal)
 
-            self.conn.query(store.User).filter_by(user_id=user_id).update({'password': new_password, 'token': token,
-                                                                           'terminal': terminal})
+            rowcount = self.conn.query(store.User).filter_by(user_id=user_id).update(
+                {'password': new_password, 'token': token, 'terminal': terminal})
+            if rowcount == 0:
+                return error.error_authorization_fail()
+
             self.conn.commit()
 
         except BaseException as e:

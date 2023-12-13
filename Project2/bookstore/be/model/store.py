@@ -1,7 +1,6 @@
 import logging
 from sqlalchemy import Column, String, create_engine, Integer, ForeignKey
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 
 Base = declarative_base()
@@ -44,7 +43,7 @@ class NewOrder(Base):
 # 定义NewOrderDetail对象
 class NewOrderDetail(Base):
     __tablename__ = 'new_order_detail'
-    order_id = Column(String, ForeignKey('new_order.order_id'), primary_key=True, nullable=False)
+    order_id = Column(String, primary_key=True, nullable=False)
     book_id = Column(String, primary_key=True, nullable=False)
     count = Column(Integer)
     price = Column(Integer)
