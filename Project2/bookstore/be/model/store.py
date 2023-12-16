@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import Column, String, create_engine, Integer, ForeignKey, Boolean, JSON, ARRAY
+from sqlalchemy import Column, String, create_engine, Integer, ForeignKey, Boolean, JSON, ARRAY, TIMESTAMP
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 
@@ -55,6 +55,7 @@ class HistoryOrder(Base):
     order_id = Column(String, primary_key=True, unique=True, nullable=False)
     user_id = Column(String, primary_key=True, nullable=False)
     store_id = Column(String)
+    create_time = Column(TIMESTAMP)
     book_info = Column(ARRAY(JSON))
     is_cancelled = Column(Boolean)
     is_paid = Column(Boolean)
@@ -71,7 +72,6 @@ class BookDetail(Base):
     book_intro = Column(String)
     content = Column(String)
     tags = Column(String)
-    description = Column(String)
 
 
 class Store:

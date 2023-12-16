@@ -1,6 +1,4 @@
 import json
-import re
-import jieba
 from be.model import error
 from be.model import db_conn
 from be.model import store
@@ -9,13 +7,6 @@ from be.model import store
 class Seller(db_conn.DBConn):
     def __init__(self):
         db_conn.DBConn.__init__(self)
-
-    def split_words(self, text):
-        words = re.sub(r'[^\w\s\n]', '', text)
-        words = re.sub(r'\n', '', words)
-        res = jieba.cut(words, cut_all=False)
-        res_str = ' '.join(res)
-        return res_str
 
     def add_book(
         self,
@@ -35,24 +26,21 @@ class Seller(db_conn.DBConn):
 
             new_book = store.StoreTable(store_id=store_id, book_id=book_id, book_info=book_json_str, stock_level=stock_level)
             self.conn.add(new_book)
-            self.conn.commit()
 
             # 加入全站书籍名录
             row = self.conn.query(store.BookDetail).filter_by(book_id=book_id).first()
             if row is None:
                 book_info = json.loads(book_json_str)
-                des_str = book_info["title"] + self.split_words(book_info["title"]) + " " + \
-                          self.split_words(book_info["book_intro"]) + " " + self.split_words(book_info["content"])
-
                 new_book_detail = store.BookDetail(
                     book_id=book_info["id"], title=book_info["title"], author=book_info["author"],
-                    book_intro=book_info["book_intro"], content=book_info["content"], tags=book_info["tags"],
-                    description=des_str)
+                    book_intro=book_info["book_intro"], content=book_info["content"], tags=str(book_info["tags"]))
                 self.conn.add(new_book_detail)
-                self.conn.commit()
+
+            self.conn.commit()
 
         except BaseException as e:
             return 530, "{}".format(str(e))
+
         return 200, "ok"
 
     def add_stock_level(
@@ -87,4 +75,34 @@ class Seller(db_conn.DBConn):
 
         except BaseException as e:
             return 530, "{}".format(str(e))
+        return 200, "ok"
+
+    # 发货
+    def deliver_book(self, user_id: str, store_id: str, order_id: str):
+        try:
+            if not self.user_id_exist(user_id):
+                return error.error_non_exist_user_id(user_id)
+            if not self.store_id_exist(store_id):
+                return error.error_non_exist_store_id(store_id)
+
+            row = self.conn.query(store.HistoryOrder).filter_by(order_id=order_id).first()
+            if row is None:
+                return error.error_invalid_order_id(order_id)
+
+            is_cancelled = row.is_cancelled
+            if is_cancelled:
+                return error.error_order_cancelled(order_id)
+            is_paid = row.is_paid
+            if not is_paid:
+                return error.error_order_not_paid(order_id)
+
+            # 更新历史订单状态为已发货
+            rowcount = self.conn.query(store.HistoryOrder).filter_by(order_id=order_id).update({'is_delivered': True})
+            if rowcount == 0:
+                return error.error_invalid_order_id(order_id)
+
+            self.conn.commit()
+
+        except Exception as e:
+            return 530, f"{str(e)}"
         return 200, "ok"
