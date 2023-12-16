@@ -40,3 +40,60 @@ def add_funds():
     b = Buyer()
     code, message = b.add_funds(user_id, password, add_value)
     return jsonify({"message": message}), code
+
+
+@bp_buyer.route("/receive_book", methods=["POST"])
+def receive_book():
+    user_id = request.json.get("user_id")
+    order_id = request.json.get("order_id")
+    b = Buyer()
+    code, message = b.receive_book(user_id, order_id)
+    return jsonify({"message": message}), code
+
+
+@bp_buyer.route("/buyer_cancel_order", methods=["POST"])
+def cancel_order():
+    user_id = request.json.get("user_id")
+    order_id = request.json.get("order_id")
+    b = Buyer()
+    code, message = b.buyer_cancel_order(user_id, order_id)
+    return jsonify({"message": message}), code
+
+
+@bp_buyer.route("/overtime_cancel_order", methods=["POST"])
+def overtime_cancel_order():
+    b = Buyer()
+    code, message = b.overtime_cancel_order()
+    return jsonify({"message": message}), code
+
+
+@bp_buyer.route("/search_book", methods=["POST"])
+def search_book():
+    store_id = request.json.get("store_id")
+    title = request.json.get("title")
+    author = request.json.get("author")
+    book_intro = request.json.get("book_intro")
+    content = request.json.get("content")
+    tags = request.json.get("tags")
+
+    # 分页参数
+    page = int(request.args.get("page", 1))  # 当前选中页面数
+    per_page = int(request.args.get("per_page", 3))  # 每页显示的条目数，默认为3
+
+    b = Buyer()
+    code, message = b.search_book(store_id, title, author, book_intro, content, tags, page, per_page)
+    return jsonify({"message": message}), code
+
+
+@bp_buyer.route("/search_history_order", methods=["POST"])
+def search_history_order():
+    user_id = request.json.get("user_id")
+    order_id = request.json.get("order_id")
+
+    # 分页参数
+    page = int(request.args.get("page", 1))  # 当前选中页面数
+    per_page = int(request.args.get("per_page", 3))  # 每页显示的条目数，默认为3
+
+    b = Buyer()
+    code, message = b.search_history_order(user_id, order_id, page, per_page)
+    return jsonify({"message": message}), code
