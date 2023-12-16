@@ -48,3 +48,60 @@ class Buyer:
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
+
+    def receive_book(self, order_id: str):
+        json = {
+            "user_id": self.user_id,
+            "order_id": order_id,
+        }
+        url = urljoin(self.url_prefix, "receive_book")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        return r.status_code
+
+    def buyer_cancel_order(self, order_id: str):
+        json = {
+            "user_id": self.user_id,
+            "order_id": order_id,
+        }
+        url = urljoin(self.url_prefix, "buyer_cancel_order")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        return r.status_code
+
+    def overtime_cancel_order(self):
+        url = urljoin(self.url_prefix, "overtime_cancel_order")
+        r = requests.post(url)
+        return r.status_code
+
+    def search_history_order(self, order_id, page=1, per_page=3) -> int:
+        json = {
+            "user_id": self.user_id,
+            "order_id": order_id
+        }
+        params = {
+            "page": page,
+            "per_page": per_page
+        }
+        url = urljoin(self.url_prefix, "search_history_order")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, params=params, json=json)
+        return r.status_code
+
+    def search_book(self, store_id, title, author, book_intro, content, tags, page=1, per_page=3):
+        json = {
+            "store_id": store_id,
+            "title": title,
+            "author": author,
+            "book_intro": book_intro,
+            "content": content,
+            "tags": tags,
+        }
+        params = {
+            "page": page,
+            "per_page": per_page
+        }
+        url = urljoin(self.url_prefix, "search_book")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, params=params, json=json)
+        return r.status_code
